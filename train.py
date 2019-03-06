@@ -157,8 +157,8 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
             F = (F + 1) / 2
             im = grid_of_images_default(F)
             imsave(f"fake_{epoch:05d}.png", im)
-            net_g_model_out_path = "netG_model_epoch_{}.pth".format(opt.dataset, epoch)
-            net_d_model_out_path = "netD_model_epoch_{}.pth".format(opt.dataset, epoch)
+            net_g_model_out_path = "netG_model_epoch_{}.pth".format(epoch)
+            net_d_model_out_path = "netD_model_epoch_{}.pth".format(epoch)
             torch.save(net_g, net_g_model_out_path)
             torch.save(net_d, net_d_model_out_path)
             print("Checkpoint saved to {}".format("checkpoint" + opt.dataset))
