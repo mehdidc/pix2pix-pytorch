@@ -160,7 +160,7 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
 
     update_learning_rate(net_g_scheduler, optimizer_g)
     update_learning_rate(net_d_scheduler, optimizer_d)
-    if epoch % 50 == 0:
+    if epoch % 1 == 0:
         if not os.path.exists("checkpoint"):
             os.mkdir("checkpoint")
         if not os.path.exists(os.path.join("checkpoint", opt.dataset)):
