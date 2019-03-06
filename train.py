@@ -68,8 +68,8 @@ optimizer_g = optim.Adam(net_g.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999)
 optimizer_d = optim.Adam(net_d.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 net_g_scheduler = get_scheduler(optimizer_g, opt)
 net_d_scheduler = get_scheduler(optimizer_d, opt)
-face_descriptor = FaceDescriptor()
-face_landmarks = FaceLandmarks()
+face_descriptor = FaceDescriptor().to(device)
+face_landmarks = FaceLandmarks().to(device)
 
 for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     # train
