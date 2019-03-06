@@ -28,7 +28,7 @@ parser.add_argument('--output_nc', type=int, default=3, help='output image chann
 parser.add_argument('--ngf', type=int, default=64, help='generator filters in first conv layer')
 parser.add_argument('--ndf', type=int, default=64, help='discriminator filters in first conv layer')
 parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count')
-parser.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
+parser.add_argument('--niter', type=int, default=1000, help='# of iter at starting learning rate')
 parser.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
 parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
