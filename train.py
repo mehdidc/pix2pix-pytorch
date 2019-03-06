@@ -2,7 +2,7 @@ from __future__ import print_function
 import argparse
 import os
 from math import log10
-
+from skimage.io import imsave
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,7 +10,12 @@ from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 
 from networks import define_G, define_D, GANLoss, get_scheduler, update_learning_rate
-from data import get_training_set, get_test_set
+
+from dataset import get_dataset
+
+from utils import grid_of_images_default
+from face import FaceDescriptor, FaceLandmarks
+
 
 # Training settings
 parser = argparse.ArgumentParser(description='pix2pix-pytorch-implementation')
@@ -47,14 +52,9 @@ if opt.cuda:
     torch.cuda.manual_seed(opt.seed)
 
 print('===> Loading datasets')
-root_path = "dataset/"
-train_set = get_training_set(root_path + opt.dataset, opt.direction)
-test_set = get_test_set(root_path + opt.dataset, opt.direction)
+train_set = get_dataset(path=opt.dataset)
 training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batch_size, shuffle=True)
-testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.test_batch_size, shuffle=False)
-
 device = torch.device("cuda:0" if opt.cuda else "cpu")
-
 print('===> Building models')
 net_g = define_G(opt.input_nc, opt.output_nc, opt.ngf, 'batch', False, 'normal', 0.02, gpu_id=device)
 net_d = define_D(opt.input_nc + opt.output_nc, opt.ndf, 'basic', gpu_id=device)
@@ -68,12 +68,33 @@ optimizer_g = optim.Adam(net_g.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999)
 optimizer_d = optim.Adam(net_d.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 net_g_scheduler = get_scheduler(optimizer_g, opt)
 net_d_scheduler = get_scheduler(optimizer_d, opt)
+face_descriptor = FaceDescriptor()
+face_landmarks = FaceLandmarks()
 
 for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     # train
-    for iteration, batch in enumerate(training_data_loader, 1):
+    for iteration, (X, _) in enumerate(training_data_loader, 1):
         # forward
-        real_a, real_b = batch[0].to(device), batch[1].to(device)
+        X = X.to(device)
+        FL = face_landmarks(X)
+        FL_ = FL.view(FL.size(0), 68, 64*64)
+        FL_max, _ = FL_.max(dim=2)
+        FL_max = FL_max.view(FL_max.size(0), FL_max.size(1), 1)
+        FL = (FL_>=FL_max).float().sum(dim=1).view(FL.size(0), 1, 64, 64)
+        FL[FL>0] = 1
+        FL = nn.AdaptiveMaxPool2d((256, 256))(FL)
+        FL = FL.detach()
+
+        FD = face_descriptor(X)
+        FD = nn.AdaptiveMaxPool2d((256, 256))(FD)
+        FD = (FD + 26)/(2*26)
+        FD = FD.clamp_(0, 1)
+        
+        H = torch.cat((FL, FD), dim=1)
+        H = H.detach()
+        real_a = H
+        real_b = X
+
         fake_b = net_g(real_a)
 
         ######################
@@ -81,7 +102,7 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         ######################
 
         optimizer_d.zero_grad()
-        
+
         # train with fake
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = net_d.forward(fake_ab.detach())
@@ -91,12 +112,12 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = net_d.forward(real_ab)
         loss_d_real = criterionGAN(pred_real, True)
-        
+
         # Combined D loss
         loss_d = (loss_d_fake + loss_d_real) * 0.5
 
         loss_d.backward()
-       
+
         optimizer_d.step()
 
         ######################
@@ -121,22 +142,24 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
 
         print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
             epoch, iteration, len(training_data_loader), loss_d.item(), loss_g.item()))
+        if iteration % 100 == 0 or iteration == 1:
+            I = real_a.detach().cpu().numpy().transpose((0, 2, 3, 1))
+            I = I[:, :, :, 0:1]
+            im = grid_of_images_default(I)
+            imsave("input.png", im)
+            
+            R = real_b.detach().cpu().numpy().transpose((0, 2, 3, 1)) 
+            R = (R + 1) / 2
+            im = grid_of_images_default(R)
+            imsave("real.png", im)
+            
+            F = fake_b.detach().cpu().numpy().transpose((0, 2, 3, 1)) 
+            F = (F + 1) / 2
+            im = grid_of_images_default(F)
+            imsave("fake.png", im)
 
     update_learning_rate(net_g_scheduler, optimizer_g)
     update_learning_rate(net_d_scheduler, optimizer_d)
-
-    # test
-    avg_psnr = 0
-    for batch in testing_data_loader:
-        input, target = batch[0].to(device), batch[1].to(device)
-
-        prediction = net_g(input)
-        mse = criterionMSE(prediction, target)
-        psnr = 10 * log10(1 / mse.item())
-        avg_psnr += psnr
-    print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
-
-    #checkpoint
     if epoch % 50 == 0:
         if not os.path.exists("checkpoint"):
             os.mkdir("checkpoint")
