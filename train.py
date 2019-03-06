@@ -146,17 +146,17 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
             I = real_a.detach().cpu().numpy().transpose((0, 2, 3, 1))
             I = I[:, :, :, 0:1]
             im = grid_of_images_default(I)
-            imsave("input.png", im)
+            imsave(f"input_{epoch:05d}.png", im)
             
             R = real_b.detach().cpu().numpy().transpose((0, 2, 3, 1)) 
             R = (R + 1) / 2
             im = grid_of_images_default(R)
-            imsave("real.png", im)
+            imsave(f"real_{epoch:05d}.png", im)
             
             F = fake_b.detach().cpu().numpy().transpose((0, 2, 3, 1)) 
             F = (F + 1) / 2
             im = grid_of_images_default(F)
-            imsave("fake.png", im)
+            imsave(f"fake_{epoch:05d}.png", im)
 
     update_learning_rate(net_g_scheduler, optimizer_g)
     update_learning_rate(net_d_scheduler, optimizer_d)
