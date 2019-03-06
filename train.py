@@ -157,12 +157,8 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
             F = (F + 1) / 2
             im = grid_of_images_default(F)
             imsave(f"fake_{epoch:05d}.png", im)
-            if not os.path.exists("checkpoint"):
-                os.mkdir("checkpoint")
-            if not os.path.exists(os.path.join("checkpoint", opt.dataset)):
-                os.mkdir(os.path.join("checkpoint", opt.dataset))
-            net_g_model_out_path = "checkpoint/{}/netG_model_epoch_{}.pth".format(opt.dataset, epoch)
-            net_d_model_out_path = "checkpoint/{}/netD_model_epoch_{}.pth".format(opt.dataset, epoch)
+            net_g_model_out_path = "netG_model_epoch_{}.pth".format(opt.dataset, epoch)
+            net_d_model_out_path = "netD_model_epoch_{}.pth".format(opt.dataset, epoch)
             torch.save(net_g, net_g_model_out_path)
             torch.save(net_d, net_d_model_out_path)
             print("Checkpoint saved to {}".format("checkpoint" + opt.dataset))
